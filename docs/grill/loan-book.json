@@ -1,0 +1,395 @@
+{
+  "slug": "loan-book",
+  "title": "Loan book",
+  "created_at": "2026-10-13T13:56:34Z",
+  "updated_at": "2026-10-13T15:08:00Z",
+  "status": "settled",
+  "adrs": [
+    "docs/adr/0001-loans-are-records-not-accounts.md",
+    "docs/adr/0002-fork-migrations-are-one-way.md"
+  ],
+  "synthesis": "# Loan book: agreed design (version 1)\n\n**What it is.** A loan book page listing every **loan**: money I owe and money owed to me (Q1). It covers informal loans with people, and bank loans whose interest and indexation you enter from the statement (Q2). Desktop and web only (Q6), built in upstream style to keep rebases easy (Q5).\n\n**Model**\n- A **loan** has one **counterparty**, which is an existing payee (Q8), and a fixed **direction** (Q1, Q27). A person usually has one running loan, and a separate agreement gets its own loan; bank loans are always their own (Q7).\n- A loan is its own record, not an account. Covered purchases live in one shared on-budget **Loans account** (Q12, ADR 0001).\n- The balance is always the sum of entries: **opening balance** (Q15), linked transactions, **interest entries** typed from the statement (Q16, Q21) and an occasional **adjustment** (Q21). The opening balance, interest entries and adjustments have no budget effect.\n\n**Budget rules** (Q9, Q14, Q17). The entry kind is inferred from the account, the sign of the amount and the loan's direction:\n\n| Kind | Budget | Balance |\n|---|---|---|\n| Covered purchase (in the Loans account) | its own category | owe more |\n| Cash received | income, \"Borrowed money\" | owe more |\n| Repayment of covered purchases | neutral transfer to the Loans account | owe less |\n| Repayment of cash | spending, \"Loan repayments\" or the loan's own category | owe less |\n| Lent | spending, \"Money lent\" | owed more |\n| Repaid to me | income | owed less |\n\n- Default categories are created on first use, can be renamed, and can be overridden per loan (Q13).\n- Within a loan, a repayment pays covered purchases first, oldest first, and splits the transaction when it crosses from covered to cash (Q19, Q26).\n\n**Linking** (Q18, Q23, Q26)\n- The core links a transaction automatically when its payee is a counterparty with an open loan. With several open loans it picks the oldest, and you can change it. This also works for imports, bank sync and mobile entry.\n- Splits can spread one payment over several loans.\n- Every transaction in the Loans account requires a loan, since its payee is the merchant.\n- An optional Loan column appears in the desktop transaction table.\n\n**Loan book page** (Q10, Q11, Q24)\n- Totals for \"I owe\" and \"Owed to me\", plus netted per-person totals.\n- One row per loan: counterparty, name, direction, balance, original amount, last activity.\n- A detail view with history, running balance and a note.\n- Actions: new loan, interest entry, adjust to statement, close.\n- Paid-off loans prompt you to close them, and closed loans are hidden but kept.\n- Delete only works while nothing is linked.\n\n**Out of scope for version 1**\n- Mobile loan UI.\n- Reports and net worth; this is the first follow-up (Q20).\n- Automatic interest and CPI calculation (Q21).\n- Due dates and reminders (Q10).\n- Foreign-currency loans (Q25).\n- Rules actions that set a loan.\n- Manual allocation within one loan.\n",
+  "rounds": [
+    {
+      "round": 1,
+      "asked_at": "2026-10-13T13:56:34Z",
+      "note": null
+    },
+    {
+      "round": 2,
+      "asked_at": "2026-10-13T14:12:00Z",
+      "note": null
+    },
+    {
+      "round": 3,
+      "asked_at": "2026-10-13T14:20:00Z",
+      "note": null
+    },
+    {
+      "round": 4,
+      "asked_at": "2026-10-13T14:30:00Z",
+      "note": null
+    },
+    {
+      "round": 5,
+      "asked_at": "2026-10-13T14:42:00Z",
+      "note": null
+    },
+    {
+      "round": 6,
+      "asked_at": "2026-10-13T14:52:00Z",
+      "note": null
+    }
+  ],
+  "questions": [
+    {
+      "number": 1,
+      "round": 1,
+      "title": "Direction",
+      "body": "Should the loan book only track money **you owe** (borrowed from a bank, a friend or family), or also money **owed to you** (you lent someone money)?",
+      "suggestion": "Both, in one list, with a direction flag on each loan. It costs very little extra, and \"who owes whom\" is usually a two-way question once friends and family are involved.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:12:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 2,
+      "round": 1,
+      "title": "What kinds of loans",
+      "body": "Which of these do you need to cover?\n\n- (a) **Informal personal loans**: friends or family, no interest, ad-hoc repayments.\n- (b) **Formal bank loans**: mortgage, car loan, student loan (Menntasjóður). These have interest, a payment plan and possibly **verðtrygging** (CPI indexation), so the balance can grow even while you pay.\n- (c) Credit cards and overdraft (yfirdráttur).\n\nThis is the biggest branch in the tree. Formal loans with indexation and amortization are many times more work than (a).",
+      "suggestion": "Start with (a), plus (b) where the balance is **entered or updated by you** from the bank statement instead of calculated. Leave (c) out, because Actual already handles credit cards well as ordinary accounts.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:12:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 3,
+      "round": 1,
+      "title": "What \"select a loan when registering spending\" means",
+      "body": "When you pick a loan on a transaction, what is the transaction?\n\n- (a) **A repayment**: I paid Jón 20.000 kr, so my debt to Jón goes down.\n- (b) **Spending funded by the loan**: Jón paid for my dinner, so I now owe Jón more.\n- (c) **Both**, and the direction is clear from the transaction.",
+      "suggestion": "(c). Both happen in real life. A plain sign rule could cover it: money out of my account toward a loan reduces what I owe, and an expense someone else covered increases it. We'll go through the mechanics once Q1–Q3 are settled.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:12:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 4,
+      "round": 1,
+      "title": "Where the balance comes from",
+      "body": "How should a loan's \"how much do I owe\" be determined?\n\n- (a) **Calculated** from an opening amount plus every transaction linked to the loan.\n- (b) **Entered by hand**: you update it, and linked transactions are just history.\n- (c) **Calculated, with manual adjustments** to account for interest and indexation.",
+      "suggestion": "(c). A calculated balance stays honest for personal loans, and for bank loans an occasional \"adjust to statement\" entry absorbs interest and indexation without us modelling either.",
+      "revisions": [
+        {
+          "round": 2,
+          "added_at": "2026-10-13T14:12:00Z",
+          "suggestion": null,
+          "text": "**\"Calculated\" means you never type the balance.** The loan has an opening amount, and the app adds or subtracts every transaction linked to the loan. For example: you borrow 100.000 kr from Jón, then repay 20.000 and 30.000, so the loan book shows 50.000 owed.\n\n**(c) adds adjustments on top of that.** For a bank loan the bank's figure drifts away from your payments, because of interest and verðtrygging. Once in a while you enter the bank's figure (\"the statement says 4.213.000\"), and the app records the difference as an **adjustment entry** on the loan. The balance is still a sum of entries, so the history shows where every krona came from, but you never have to model interest or the CPI.\n\nThe alternative, (b), is typing the balance directly each time. It's simpler, but the transactions and the balance can then disagree with no trace of why."
+        },
+        {
+          "round": 3,
+          "added_at": "2026-10-13T14:20:00Z",
+          "suggestion": null,
+          "text": "Still open: your round 1 answer was a question, and round 2 didn't include Q4. **Do you agree with (c)**, the calculated balance with adjustment entries, now that it's explained?"
+        },
+        {
+          "round": 4,
+          "added_at": "2026-10-13T14:30:00Z",
+          "suggestion": null,
+          "text": "Still unanswered, probably because the viewer treats the question text you typed in round 1 as an answer. Just type `Q4: I agree with your suggestion.` (or your answer) in the terminal."
+        },
+        {
+          "round": 5,
+          "added_at": "2026-10-13T14:42:00Z",
+          "suggestion": null,
+          "text": "Folded into **Q21**: your Q16 answer (interest added to the loan as it happens) changes this question, so Q21 asks it again in that light."
+        }
+      ],
+      "answer": "What do you mean with c) Calculated?",
+      "agreed": false,
+      "answered_at": "2026-10-13T14:12:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 5,
+      "round": 1,
+      "title": "Upstream ambitions",
+      "body": "Is this only for you, or might you want to send it upstream to `actualbudget/actual` someday?",
+      "suggestion": "Personal only, but build it the way upstream builds things: new tables, new pages, small changes to existing files. That keeps rebases painless, and contributing it later stays possible.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:12:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 6,
+      "round": 1,
+      "title": "Devices",
+      "body": "Do you need to pick a loan when entering transactions **on your phone** (Actual's mobile web UI, or the Capacitor app), or is desktop and web enough?",
+      "suggestion": "Desktop and web first, with mobile as a later phase. Mobile transaction entry is a separate set of screens, so supporting it roughly doubles the UI work.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:12:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 7,
+      "round": 2,
+      "title": "What exactly is one \"loan\"?",
+      "body": "Say you've borrowed from Jón three times: 100.000 for the car in March, 15.000 for a concert in June, and he paid 8.000 for a dinner in August. Is that:\n\n- (a) **One loan per person**: a running tab with Jón. \"I owe Jón 123.000\" minus whatever you've repaid.\n- (b) **One loan per agreement**: three separate loans with Jón, each with its own balance and its own repayments.\n- (c) **Loans grouped under people**: separate loans, but the loan book also shows the total per person.\n\nThis decides what you pick on a transaction, either \"Jón\" or \"Jón – car\".",
+      "suggestion": "(c), but with the default flow being (a). Creating an informal loan is just \"new loan with Jón\", and dinners and small favours go onto the one existing loan with that person. You only add a second loan for the same person when it's a real separate agreement, like the car money. A bank loan is always its own loan (mortgage, car loan, Menntasjóður).",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:20:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 8,
+      "round": 2,
+      "title": "Who is the other party: an existing payee or a new list?",
+      "body": "Actual already keeps a list of **payees** (Jón, Landsbankinn, Bónus...), used for rules, reports and autocomplete. The person or bank on the other side of a loan could be:\n\n- (a) **An existing payee**: the loan points at the payee \"Jón\", so typing \"Jón\" as a payee could suggest his loan automatically.\n- (b) **A separate contacts list** that only the loan book uses.",
+      "suggestion": "(a). Jón is already a payee, because you pay him back from your bank account. Reusing payees means no duplicate names, and the link from transaction to loan can be suggested from a payee you already type.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:20:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 9,
+      "round": 2,
+      "title": "How does each loan event affect your budget?",
+      "body": "Four typical events, and how I'd treat each one. Tell me where you disagree:\n\n| # | Event | Category? | Loan balance |\n|---|---|---|---|\n| 1 | Jón pays for your 8.000 dinner | **Food**, 8.000 spent | owe +8.000 |\n| 2 | You repay Jón 8.000 from your bank account | **none**, neutral, the dinner was already counted | owe −8.000 |\n| 3 | Jón (or a bank) puts 100.000 **cash** into your account | counts as **income** you can budget (\"To budget\" +100.000) | owe +100.000 |\n| 4 | You repay that 100.000, in instalments | **spending** in a \"Loan repayments\" category | owe −100.000 |\n\nThe rule behind it is that every krona of debt touches the budget exactly once on the way in and once on the way out. Over the life of the loan the total equals what you actually spent, with nothing counted twice. The catch is that #2 and #4 look the same (money to Jón) but are treated differently. That means a loan, or each entry on it, needs to know whether it was **spending someone covered** or **cash you received**.",
+      "suggestion": "Use the four rules in the table. The thing that separates #2 from #4 is set per entry when the money comes in (\"covered a purchase\" vs \"lent me cash\"), and a repayment is split proportionally if the loan has both kinds. Most informal loans will be only one kind anyway.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:20:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 10,
+      "round": 2,
+      "title": "What does the loan book page show?",
+      "body": "My draft:\n\n- **Summary at the top**: \"I owe: X\" and \"Owed to me: Y\".\n- **One row per loan**: other party, name (e.g. \"Car money\"), direction, current balance, original amount, last activity date.\n- **Click a row** to see the loan's history: every linked transaction and adjustment, with a running balance and a short note field.\n- **Actions**: new loan, adjust to statement, close loan.\n\nWhat's missing or unnecessary? Some candidates: due dates and reminders, a progress bar (paid vs original), per-person totals, sorting by who you owe the most.",
+      "suggestion": "The draft as written plus per-person totals (from Q7). Leave due dates and reminders out of version 1. Actual's schedules could cover reminders for bank loans later.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:20:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 11,
+      "round": 2,
+      "title": "What happens when a loan is paid off?",
+      "body": "When the balance reaches 0:\n\n- (a) The loan **closes automatically** and moves to a \"Closed\" section.\n- (b) It stays open until **you** close it.\n- (c) Closed loans are **deleted**.",
+      "suggestion": "(b), with a \"Paid off – close?\" hint when it reaches 0. You might borrow from Jón again next month, and the default from Q7 is to reuse the same loan with a person. Closed loans are kept and hidden from the main list, never deleted, because their history is part of your transactions.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:20:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 12,
+      "round": 3,
+      "title": "Where does a covered purchase live?",
+      "body": "In Actual every transaction belongs to an **account**, and the budget only counts spending in on-budget accounts. When Jón pays for your dinner (a covered purchase), no money leaves any of your accounts, so the 8.000 Food spending has to sit somewhere. The other three cases from Q9 are ordinary transactions in your bank account (cash received, repayment), just linked to a loan.\n\nOptions:\n\n- (a) **One shared on-budget \"Loans\" account**, like a credit card for every counterparty. A covered purchase is entered there with its category, and its balance is your total covered debt. Repaying it is a transfer from your bank account, which is neutral, matching Q9 #2.\n- (b) **One on-budget account per loan.** This gives a cleaner per-loan view inside Actual, but it clutters the account list and duplicates what the loan book page already shows.\n- (c) **A transaction with no account.** This fights Actual's core model: balances, reconciling and the budget engine all assume an account.\n\nI also checked whether loans could simply *be* accounts, with no new loan concept. They can't follow Q9: a transfer between two on-budget accounts always clears the category, so cash received couldn't be income and repayments couldn't be spending.",
+      "suggestion": "(a). One \"Loans\" account created by the loan book, plus a new **Loan** record that transactions link to. The loan book page does the per-loan view. This is the hard-to-reverse core of the design, so it gets an ADR.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:30:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 13,
+      "round": 3,
+      "title": "Categories for borrowed money and repayments",
+      "body": "Q9 needs an **income** category for cash received and an **expense** category for repayments of cash loans. Should the loan book create them, for example *Income › Borrowed money* and *Loans › Loan repayments*, or should you pick existing categories when setting up a loan?",
+      "suggestion": "Create both automatically the first time you add a loan that needs them, under names you can rename. Each loan can then override them, for example *Housing › Mortgage* for the mortgage repayment.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:30:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 14,
+      "round": 3,
+      "title": "Lending: the \"owed to me\" side",
+      "body": "Mirror of Q9 for money **you lend out**:\n\n| # | Event | Category? | Owed to me |\n|---|---|---|---|\n| 5 | You give Jón 50.000 cash, or pay something of his | **spending** in a \"Money lent\" category | +50.000 |\n| 6 | Jón pays you back 50.000 | **income** (\"To budget\" +50.000) | −50.000 |\n\nThe money genuinely leaves your budget when you lend it and comes back when you're repaid. If you'd rather lending be neutral (\"it's still my money, just elsewhere\"), the outflow has to sit in an account, like Q12 (a), so that it isn't counted as spending.",
+      "suggestion": "Use the table, the spending/income version. It's honest about cash you can't use right now, and it needs no extra account. You'll see \"Money lent\" spending in reports, which is a feature.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:30:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 15,
+      "round": 3,
+      "title": "Loans that already exist today",
+      "body": "You'll be adding loans that started before the loan book existed: the mortgage at 30.000.000, \"I already owe Jón 40.000\". Their **opening balance** could be:\n\n- (a) **Budget-neutral**: just a starting figure on the loan, with no transaction and no category.\n- (b) A real transaction dated back.",
+      "suggestion": "(a). An opening balance is an entry on the loan, like an adjustment, with no budget effect. The budget past is already what it is; only events from now on go through Q9's rules.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:30:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 16,
+      "round": 4,
+      "title": "Do adjustment entries touch the budget?",
+      "body": "Assuming Q4 (c). Your mortgage payment of 250.000 is categorized as *Housing › Mortgage* (Q9 #4, Q13) and lowers the loan by 250.000. In reality only part of it was principal, and verðtrygging added to the balance. When you later enter the statement figure, the difference becomes an **adjustment entry**.\n\nShould that adjustment (a) have **no budget effect**, only correcting the loan balance, or (b) be booked as spending, e.g. *Interest & indexation*?",
+      "suggestion": "(a). The real cash cost is already in the budget through the payments you made. Interest and indexation are money you'll pay *later*, and they hit the budget when you actually pay. Booking them now would count them twice.",
+      "revisions": [],
+      "answer": "We should add the interest onto the loan when it happens which makes the loan increase, so each payment hits the total",
+      "agreed": false,
+      "answered_at": "2026-10-13T14:42:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 17,
+      "round": 4,
+      "title": "Work out the entry kind automatically",
+      "body": "Each linked transaction needs a kind (covered purchase, cash received, repayment, lent, repaid to me) for Q9 and Q14 to work. Instead of asking you, it could be inferred:\n\n| Where it is | Money | Loan direction | Kind |\n|---|---|---|---|\n| Loans account | out | I owe | covered purchase |\n| Bank account | in | I owe | cash received |\n| Bank account | out | I owe | repayment |\n| Bank account | out | owed to me | lent |\n| Bank account | in | owed to me | repaid to me |\n\nThe category then follows the kind (Q13), and you can still change it by hand.",
+      "suggestion": "Infer it, using the table above. You never pick a kind, and the only extra thing you do on a transaction is pick the loan.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:42:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 18,
+      "round": 4,
+      "title": "How you link a transaction to a loan",
+      "body": "When you enter a transaction with payee Jón, what happens?\n\n- (a) **Auto-link**: if Jón has exactly one open loan, the transaction links to it and shows a small loan badge. If he has several, a loan field asks which one. You can unlink it.\n- (b) **Manual**: a new \"Loan\" column in the transaction table; nothing happens unless you fill it in.\n- (c) **Via the payee list**: a separate payee entry like \"Jón (loan)\", the way transfers appear.\n\nIf the linking runs in the core (loot-core) when a transaction is saved, it also works for **imported and bank-synced transactions and for entry on the phone**, even before mobile gets its own loan UI.",
+      "suggestion": "(a), done in the core so imports and mobile benefit too, plus an optional Loan column in the desktop table for seeing and changing the link. Paying Jón for something that has nothing to do with the loan (say, buying his old bike) is the one case where you'd unlink by hand.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:42:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 19,
+      "round": 4,
+      "title": "A repayment on a loan that mixes kinds",
+      "body": "Jón's loan has 8.000 of covered purchases and 100.000 of cash received. You repay 20.000. Per Q9, the covered part is a neutral transfer and the cash part is spending in *Loan repayments*. Which part gets paid first?\n\n- (a) **Covered purchases first**: 8.000 is a transfer and 12.000 is spending. The transaction becomes a split.\n- (b) **Cash first**: all 20.000 is spending.\n- (c) **Proportional**: about 1.500 is a transfer and 18.500 is spending.",
+      "suggestion": "(a). Small favours clear first, the split only appears on the one repayment that crosses the boundary, and it's easy to follow in the history. This revises my earlier \"proportional\" remark in Q9.",
+      "revisions": [],
+      "answer": "I agree with the suggestion, but the user can edit it. For example a 20.000 loan and a 100.000 loan and a 10.000 repayment would initially reduce the 20.000 to 10.000 but the user can correct it later and change it to 20.000 and 90.000 because he was paying part of the larger loan.",
+      "agreed": false,
+      "answered_at": "2026-10-13T14:42:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 20,
+      "round": 4,
+      "title": "Reports and net worth",
+      "body": "Actual's **net worth** report sums account balances. With ADR 0001 only covered purchases live in an account, so the mortgage, cash loans and money you've lent would be **missing from net worth**.\n\n- (a) Version 1 leaves reports alone; the loan book page shows the totals.\n- (b) Net worth includes the loan book balances.",
+      "suggestion": "(a) for version 1, with (b) as the first follow-up. Changing the reports touches more upstream code, which makes rebasing harder, and the loan book page already answers \"who do I owe and how much\".",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:42:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 21,
+      "round": 5,
+      "title": "How interest and indexation get onto a loan",
+      "body": "From Q16: interest is added to the loan when it happens, so the balance goes up, and each payment brings it down. Combined with Q2 (no modelling of rates for version 1), who records the interest?\n\n- (a) **You record it**: a monthly **interest entry** per bank loan, with the figure from the statement (Landsbankinn shows interest and verðbætur per payment). Verðtrygging is its own entry of the same kind.\n- (b) **The app calculates it** from a stored interest rate, and the CPI for indexed loans. This is accurate without typing, but it's the formal-loan modelling Q2 left out, and indexation needs Hagstofa CPI data.\n- (c) **(a) plus an \"adjust to statement\"** entry for whatever is still off (rounding, fees).\n\nIn every option these entries have **no budget effect**: they raise the loan, and the cost reaches the budget through the categorized payments (Q9 #4). Over the life of the loan the budget sees exactly what you paid, principal plus interest.\n\nThis replaces Q4.",
+      "suggestion": "(c). Interest and indexation entries typed from the statement each month, with no budget effect, and \"adjust to statement\" kept as an escape hatch. Automatic calculation (b) is a later phase. The balance stays \"calculated\" in Q4's sense: a sum of entries.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:52:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 22,
+      "round": 5,
+      "title": "Your Q19 example: two loans, or two parts of one loan?",
+      "body": "You wrote about \"a 20.000 loan and a 100.000 loan\". In our glossary a **loan** is the whole arrangement with Jón, and covered purchases and cash received are **entries** within it. So which did you mean?\n\n- (a) **Two entries in one loan** (20.000 covered purchase and 100.000 cash received), and you want to choose which one a repayment pays down.\n- (b) **Two separate loans with Jón**, and you want to move a repayment from one loan to the other (Q18's \"which loan\" choice).\n\nIf (a), each repayment remembers which entries it paid, which is more detailed than the plain \"covered first\" split from Q19.",
+      "suggestion": "I suspect (a). Then a repayment gets an editable **allocation**: by default covered purchases first, oldest first, but you can move it to specific entries. Under (b), the editable loan field from Q18 already covers it.",
+      "revisions": [],
+      "answer": "I was describing (b)",
+      "agreed": false,
+      "answered_at": "2026-10-13T14:52:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 23,
+      "round": 5,
+      "title": "Linking a covered purchase",
+      "body": "Jón pays for dinner at Kaffi Vest. The transaction goes into the Loans account (ADR 0001) with payee **Kaffi Vest** and category Food. Auto-linking by payee (Q18) can't find Jón here.\n\n- (a) Every transaction in the Loans account **must** have a loan, so the loan field is required and prominent there.\n- (b) The payee becomes Jón and the restaurant goes into the notes.",
+      "suggestion": "(a). The payee stays the real merchant, so reports and rules keep working, and the Loans account simply won't save a transaction without a loan.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:52:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 24,
+      "round": 5,
+      "title": "Deleting a loan you created by mistake",
+      "body": "Q11 settled that paid-off loans are closed, never deleted. But you might create a loan by mistake. Should deletion be:\n\n- (a) allowed only while the loan has **no linked transactions**,\n- (b) allowed always, with linked transactions **unlinked** (and Loans account transactions left without a loan), or\n- (c) never possible?",
+      "suggestion": "(a). Delete is offered while the loan has nothing linked. Otherwise you unlink or move the transactions first, so the books can't silently change.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:52:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 25,
+      "round": 5,
+      "title": "Loans in a foreign currency",
+      "body": "An Actual budget has a single currency (ISK for you). Do you have, or expect, loans in EUR or another currency?",
+      "suggestion": "Out of scope for version 1. Every loan is in the budget's currency. A EUR loan could be tracked in ISK and corrected with \"adjust to statement\" when the exchange rate moves.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T14:52:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 26,
+      "round": 6,
+      "title": "Which loan a payment goes to when there are several",
+      "body": "From Q22 (b): Jón has two open loans, 20.000 and 100.000. You pay him 10.000. Your example has it land on the 20.000 loan first, and you move it later. Q18 had said \"a loan field asks which one\"; your example suggests it should pick one by itself instead. Which loan does it pick?\n\n- (a) The **oldest** open loan with Jón.\n- (b) The loan with the **smallest** balance.\n- (c) The loan you **last used** with Jón.\n- (d) None. Leave it unlinked and flag it, so you have to pick.\n\nAlso, should one payment be able to go to **both** loans? Using Actual's split transactions, e.g. 5.000 to each, where each split line has its own loan.\n\nWithin a single loan, the allocation stays as in Q19: covered purchases first, oldest first, with no manual allocation in version 1.",
+      "suggestion": "(a), the oldest open loan, because paying off the earliest debt first is the most common habit and it's predictable. You change it with the loan field, which revises Q18 to \"pick a default, don't ask\". Splitting across loans: yes, through ordinary split transactions.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T15:00:00Z",
+      "answered_suggestion_version": 0
+    },
+    {
+      "number": 27,
+      "round": 6,
+      "title": "When you and the other party owe each other",
+      "body": "Jón owes you 50.000 (an \"owed to me\" loan), and then he pays for your 8.000 dinner. A covered purchase was only defined for \"I owe\" loans.\n\n- (a) Record it on a separate **\"I owe Jón\"** loan. The loan book's per-person total nets the two: Jón owes you 42.000 overall.\n- (b) Let it **reduce the \"owed to me\" loan** directly, as Jón repaying you in kind.\n- (c) A loan has no fixed direction, and its balance can cross zero.",
+      "suggestion": "(a). Every loan keeps a fixed direction, which keeps Q17's kind inference simple, and the per-person total (Q10) shows the net figure you actually care about. You can settle both with a pair of adjustment entries if you agree to call it even.",
+      "revisions": [],
+      "answer": "I agree with your suggestion.",
+      "agreed": true,
+      "answered_at": "2026-10-13T15:00:00Z",
+      "answered_suggestion_version": 0
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import type { SyncedPrefs } from '@actual-app/core/types/prefs';
 
 import { parseTransactionTableColumns } from '#components/transactions/table/columns';
 import type { TransactionTableColumn } from '#components/transactions/table/columns';
+import { useLoansAccountId } from '#hooks/useLoans';
 import { useSyncedPref } from '#hooks/useSyncedPref';
 import { saveSyncedPrefs } from '#prefs/prefsSlice';
 import { useDispatch, useSelector } from '#redux';
@@ -35,6 +36,8 @@ export function useTransactionTableColumns(accountId: string | undefined) {
   );
   const [globalColumnsConfig] = useSyncedPref('transaction-table-columns');
   const syncedPrefs = useSelector(state => state.prefs.synced);
+  // Covered purchases need a loan, so the Loans account always shows it
+  const isLoansAccount = useLoansAccountId() === accountId && !!accountId;
 
   const columnsConfig = viewColumnsConfig || globalColumnsConfig;
   // Memoized manually (the React Compiler bails out on the consuming
@@ -64,10 +67,11 @@ export function useTransactionTableColumns(accountId: string | undefined) {
             column.id === 'balance' ||
             column.id === 'cleared' ||
             column.id === 'group' ||
+            (column.id === 'loan' && isLoansAccount) ||
             !column.hidden,
         )
         .map(column => column.id),
-    [transactionColumns],
+    [transactionColumns, isLoansAccount],
   );
 
   const saveColumns = (

@@ -42,3 +42,16 @@ export type LoanSummary = LoanEntity & {
   original: IntegerAmount;
   last_activity: string | null;
 };
+
+export type LoanHistoryItem = {
+  id: string;
+  type: 'opening' | 'transaction' | LoanEntryKind;
+  date: string;
+  /** How much this changed what is owed. */
+  delta: IntegerAmount;
+  /** What was owed after this item. */
+  balance: IntegerAmount;
+  account?: string | null;
+  payee?: PayeeEntity['id'] | null;
+  notes?: string | null;
+};

@@ -5,6 +5,7 @@ import { fromDateRepr } from '#server/models';
 import type {
   LoanDirection,
   LoanEntity,
+  LoanHistoryItem,
   LoanSummary,
   TransactionEntity,
 } from '#types/models';
@@ -141,6 +142,8 @@ type LinkedRow = {
   account: string;
   amount: number;
   date: number;
+  payee: string | null;
+  notes: string | null;
   transfer_id: string | null;
   transfer_acct: string | null;
 };
@@ -180,8 +183,8 @@ async function getLinkedRows(loanIds?: string[]): Promise<LinkedRow[]> {
       ? `AND t.loan IN (${loanIds.map(() => '?').join(', ')})`
       : '';
   return db.all<LinkedRow>(
-    `SELECT t.id, t.loan, t.account, t.amount, t.date, t.transfer_id,
-            p.transfer_acct
+    `SELECT t.id, t.loan, t.account, t.amount, t.date, t.payee, t.notes,
+            t.transfer_id, p.transfer_acct
        FROM v_transactions_internal_alive t
        LEFT JOIN payees p ON p.id = t.payee
       WHERE t.loan IS NOT NULL AND t.is_parent = 0 ${filter}`,
@@ -271,9 +274,69 @@ export async function getLoanSummaries(): Promise<LoanSummary[]> {
       balance,
       covered: Math.max(covered, 0),
       original,
-      last_activity: lastActivity != null ? fromDateRepr(lastActivity) : null,
+      last_activity:
+        lastActivity != null ? fromDateRepr(lastActivity) : loan.start_date,
     };
   });
+}
+
+/** Every change to a loan, newest first, with the balance after each. */
+export async function getLoanHistory(
+  loanId: string,
+): Promise<LoanHistoryItem[]> {
+  const loan = await getLoan(loanId);
+  if (!loan) {
+    return [];
+  }
+  const loansAccountId = await getLoansAccountId();
+  const entries = await db.all<db.DbLoanEntry>(
+    'SELECT * FROM loan_entries WHERE loan = ? AND tombstone = 0',
+    [loanId],
+  );
+  const linked = await getLinkedRows([loanId]);
+
+  type Item = Omit<LoanHistoryItem, 'balance' | 'date'> & { date: number };
+  const items: Item[] = [
+    ...entries.map(
+      (entry): Item => ({
+        id: entry.id,
+        type: entry.kind,
+        date: entry.date,
+        delta: entry.amount,
+        notes: entry.notes ?? null,
+      }),
+    ),
+    ...linked
+      .map(
+        (row): Item => ({
+          id: row.id,
+          type: 'transaction',
+          date: row.date,
+          delta: linkedTransactionEffect(loan.direction, row, loansAccountId)
+            .delta,
+          account: row.account,
+          payee: row.payee,
+          notes: row.notes,
+        }),
+      )
+      .filter(item => item.delta !== 0),
+  ].sort((a, b) => a.date - b.date || a.id.localeCompare(b.id));
+
+  let balance = loan.opening_balance;
+  const history: LoanHistoryItem[] = [
+    {
+      id: `${loan.id}-opening`,
+      type: 'opening',
+      date: loan.start_date,
+      delta: loan.opening_balance,
+      balance,
+    },
+  ];
+  for (const item of items) {
+    balance += item.delta;
+    history.push({ ...item, date: fromDateRepr(item.date), balance });
+  }
+  return history.reverse();
 }
 
 async function getCoveredOutstanding(

@@ -8,6 +8,7 @@ export const TRANSACTION_TABLE_COLUMN_IDS = [
   'notes',
   'group',
   'category',
+  'loan',
   'payment',
   'deposit',
   'balance',
@@ -62,6 +63,7 @@ export function useTransactionTableColumnLabels(): Record<
     notes: t('Notes'),
     group: t('Category group'),
     category: t('Category'),
+    loan: t('Loan'),
     payment: t('Payment'),
     deposit: t('Deposit'),
     balance: t('Running balance'),
@@ -71,8 +73,8 @@ export function useTransactionTableColumnLabels(): Record<
 
 function isColumnHiddenByDefault(id: TransactionTableColumnId): boolean {
   // The running balance and category group columns are opt-in, matching the
-  // app's historical default of not showing them
-  return id === 'balance' || id === 'group';
+  // app's historical default of not showing them. So is the loan column
+  return id === 'balance' || id === 'group' || id === 'loan';
 }
 
 export function getDefaultTransactionTableColumns(): TransactionTableColumn[] {

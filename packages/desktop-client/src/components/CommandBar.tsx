@@ -5,6 +5,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import {
   SvgCog,
   SvgLibrary,
+  SvgMoneyBag,
   SvgPiggyBank,
   SvgReports,
   SvgStoreFront,
@@ -116,6 +117,7 @@ export function CommandBar() {
         path: '/schedules',
         Icon: SvgCalendar3,
       },
+      { id: 'loans', name: t('Loans'), path: '/loans', Icon: SvgMoneyBag },
       { id: 'payees', name: t('Payees'), path: '/payees', Icon: SvgStoreFront },
       { id: 'rules', name: t('Rules'), path: '/rules', Icon: SvgTuning },
       { id: 'tags', name: t('Tags'), path: '/tags', Icon: SvgTag },

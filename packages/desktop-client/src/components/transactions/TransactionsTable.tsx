@@ -147,6 +147,7 @@ import {
   isFutureTransaction,
 } from '#util/schedule-actions';
 
+import { LoanCell } from './LoanCell';
 import {
   isTransactionTableColumnAvailableInChildRows,
   isTransactionTableColumnDisplayOnly,
@@ -304,6 +305,12 @@ const TransactionHeader = memo(
         alignItems: 'flex',
         marginLeft: -5,
         sortDirection: 'asc',
+      },
+      loan: {
+        value: columnLabels.loan,
+        width: 'flex',
+        alignItems: 'flex',
+        marginLeft: -5,
       },
       payment: {
         value: columnLabels.payment,
@@ -1750,6 +1757,18 @@ const Transaction = memo(function Transaction({
               onUpdate('notes', value?.trim());
             }}
             onExpose={name => !isPreview && onEdit(id, name)}
+          />
+        );
+      case 'loan':
+        return (
+          <LoanCell
+            key={columnId}
+            transaction={transaction}
+            focused={focusedField === 'loan'}
+            isPreview={isPreview}
+            valueStyle={valueStyle ?? undefined}
+            onEdit={onEdit}
+            onUpdate={value => onUpdate('loan', value)}
           />
         );
       case 'group':

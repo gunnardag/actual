@@ -29,6 +29,8 @@ import { ContextMenu } from './ContextMenu';
 import { EnableBankingCallback } from './EnableBankingCallback';
 import { FeatureErrorFallback } from './FeatureErrorFallback';
 import { GlobalKeys } from './GlobalKeys';
+import { LoanBookPage } from './loans/LoanBookPage';
+import { LoanDetailPage } from './loans/LoanDetailPage';
 import { MobileBankSyncAccountEditPage } from './mobile/banksync/MobileBankSyncAccountEditPage';
 import { MobileNavTabs } from './mobile/MobileNavTabs';
 import { TransactionEdit } from './mobile/transactions/TransactionEdit';
@@ -367,6 +369,8 @@ export function FinancesApp() {
                       }
                     />
                     <Route path="/tags" element={<ManageTagsPage />} />
+                    <Route path="/loans" element={<LoanBookPage />} />
+                    <Route path="/loans/:id" element={<LoanDetailPage />} />
                     <Route
                       path="/notifications"
                       element={<NotificationsPage />}

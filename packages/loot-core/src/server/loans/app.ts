@@ -7,6 +7,7 @@ import type {
   LoanEntity,
   LoanEntryEntity,
   LoanEntryKind,
+  LoanHistoryItem,
   LoanSummary,
 } from '#types/models';
 
@@ -15,6 +16,7 @@ import {
   ensureDefaultCategory,
   ensureLoansAccount,
   getLoan,
+  getLoanHistory,
   getLoansAccountId,
   getLoanSummaries,
 } from './core';
@@ -23,6 +25,7 @@ export type LoansHandlers = {
   'loans-get': typeof getLoans;
   'loans-account-get': typeof getLoansAccountId;
   'loan-entries-get': typeof getLoanEntries;
+  'loan-history-get': typeof getHistory;
   'loan-create': typeof createLoan;
   'loan-update': typeof updateLoan;
   'loan-delete': typeof deleteLoan;
@@ -35,6 +38,7 @@ export const app = createApp<LoansHandlers>();
 app.method('loans-get', getLoans);
 app.method('loans-account-get', getLoansAccountId);
 app.method('loan-entries-get', getLoanEntries);
+app.method('loan-history-get', getHistory);
 app.method('loan-create', mutator(undoable(createLoan)));
 app.method('loan-update', mutator(undoable(updateLoan)));
 app.method('loan-delete', mutator(undoable(deleteLoan)));
@@ -44,6 +48,14 @@ app.method('loan-adjust-to', mutator(undoable(adjustLoanTo)));
 
 async function getLoans(): Promise<LoanSummary[]> {
   return getLoanSummaries();
+}
+
+async function getHistory({
+  loan,
+}: {
+  loan: LoanEntity['id'];
+}): Promise<LoanHistoryItem[]> {
+  return getLoanHistory(loan);
 }
 
 async function getLoanEntries({

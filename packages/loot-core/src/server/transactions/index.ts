@@ -3,6 +3,7 @@
 import * as connection from '#platform/server/connection';
 import * as db from '#server/db';
 import { incrFetch, whereIn } from '#server/db/util';
+import { prepareLoanTransactions } from '#server/loans/core';
 import { batchMessages } from '#server/sync';
 import type { Diff } from '#shared/util';
 import type { PayeeEntity, TransactionEntity } from '#types/models';
@@ -55,6 +56,13 @@ export async function batchUpdateTransactions({
   const deletedIds = deleted
     ? await idsWithChildren(deleted.map(d => d.id))
     : [];
+
+  // Link transactions to loans and fill in loan categories before saving.
+  // This can turn a repayment into a split, which adds child transactions
+  const loanChildren = await prepareLoanTransactions({ added, updated });
+  if (loanChildren.length > 0) {
+    added = [...(added ?? []), ...loanChildren];
+  }
 
   const oldPayees = new Set<PayeeEntity['id']>();
 
@@ -181,7 +189,10 @@ export async function batchUpdateTransactions({
         : []),
     ]);
     await rules.updateCategoryRules(
-      allAdded.concat(allUpdated).filter(trans => ids.has(trans.id)),
+      // Categories on loan transactions follow the loan, not the payee
+      allAdded
+        .concat(allUpdated)
+        .filter(trans => ids.has(trans.id) && !trans.loan),
     );
   }
 

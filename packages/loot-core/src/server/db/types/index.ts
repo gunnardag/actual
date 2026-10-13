@@ -38,6 +38,29 @@ export type DbAccount = {
   account_group_id?: DbAccountGroup['id'] | null;
 };
 
+export type DbLoan = {
+  id: string;
+  name: string;
+  payee: DbPayee['id'];
+  direction: 'owe' | 'owed';
+  start_date: number;
+  opening_balance: number;
+  income_category?: DbCategory['id'] | null;
+  expense_category?: DbCategory['id'] | null;
+  closed: 1 | 0;
+  tombstone: 1 | 0;
+};
+
+export type DbLoanEntry = {
+  id: string;
+  loan: DbLoan['id'];
+  date: number;
+  kind: 'interest' | 'adjustment';
+  amount: number;
+  notes?: string | null;
+  tombstone: 1 | 0;
+};
+
 export type DbAccountGroup = {
   id: string;
   name: string;
@@ -202,6 +225,7 @@ export type DbTransaction = {
   imported_description?: string | null;
   transferred_id?: DbTransaction['id'] | null;
   schedule?: DbSchedule['id'] | null;
+  loan?: DbLoan['id'] | null;
   starting_balance_flag: 1 | 0;
   tombstone: 1 | 0;
   cleared: 1 | 0;

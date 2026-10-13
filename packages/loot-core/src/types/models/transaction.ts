@@ -2,6 +2,7 @@ import type { IntegerAmount } from '#shared/util';
 
 import type { AccountEntity } from './account';
 import type { CategoryEntity } from './category';
+import type { LoanEntity } from './loan';
 import type { PayeeEntity } from './payee';
 import type { ScheduleEntity } from './schedule';
 
@@ -26,6 +27,7 @@ export type TransactionEntity = {
   tombstone?: boolean;
   forceUpcoming?: boolean;
   schedule?: ScheduleEntity['id'];
+  loan?: LoanEntity['id'] | null;
   subtransactions?: TransactionEntity[];
   _unmatched?: boolean;
   _deleted?: boolean;

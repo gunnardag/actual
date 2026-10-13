@@ -43,6 +43,9 @@ export type SyncedPrefs = Partial<
     | `transaction-table-columns-${string}`
     | `show-group-${string}`
     | 'sync-transfer-date'
+    // Loan book: the shared Loans account and its default categories
+    | 'loans-account'
+    | `loans-category-${string}`
     // TODO: pull from src/components/modals/ImportTransactions.js
     | `parse-date-${string}-${'csv' | 'qif'}`
     | `import-reimport-deleted-${string}`

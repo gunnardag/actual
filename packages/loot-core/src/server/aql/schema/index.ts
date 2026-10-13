@@ -53,6 +53,7 @@ export const schema = {
     reconciled: f('boolean', { default: false }),
     tombstone: f('boolean'),
     schedule: f('id', { ref: 'schedules' }),
+    loan: f('id', { ref: 'loans' }),
     raw_synced_data: f('string'),
     // subtransactions is a special field added if the table has the
     // `splits: grouped` option
@@ -216,6 +217,27 @@ export const schema = {
     meta: f('json'),
     tombstone: f('boolean'),
   },
+  loans: {
+    id: f('id'),
+    name: f('string', { required: true }),
+    payee: f('id', { ref: 'payees', required: true }),
+    direction: f('string', { default: 'owe' }),
+    start_date: f('date', { required: true }),
+    opening_balance: f('integer', { default: 0 }),
+    income_category: f('id', { ref: 'categories' }),
+    expense_category: f('id', { ref: 'categories' }),
+    closed: f('boolean', { default: false }),
+    tombstone: f('boolean'),
+  },
+  loan_entries: {
+    id: f('id'),
+    loan: f('id', { ref: 'loans', required: true }),
+    date: f('date', { required: true }),
+    kind: f('string', { required: true }),
+    amount: f('integer', { default: 0, required: true }),
+    notes: f('string'),
+    tombstone: f('boolean'),
+  },
   payee_locations: {
     id: f('id'),
     payee_id: f('id', { ref: 'payees', required: true }),
@@ -296,6 +318,10 @@ export const schemaConfig: SchemaConfig = {
           return ['sort_order', 'name'];
         case 'account_groups':
           return ['sort_order', 'id'];
+        case 'loans':
+          return ['start_date', 'id'];
+        case 'loan_entries':
+          return [{ date: 'desc' }, 'id'];
         case 'schedules':
           return [{ $condition: { completed: true } }, 'next_date'];
         default:
